@@ -47,7 +47,7 @@ x = _OR(_OR(_AND(x, c1), _SHIFTL64(_AND(x, c2), 7)), _AND(_SHIFTR64(x, 7), c2));
 x = _OR(_OR(_AND(x, c3), _SHIFTL64(_AND(x, c4), 14)), _AND(_SHIFTR64(x, 14), c4)); \
 x = _OR(_OR(_AND(x, c5), _SHIFTL64(_AND(x, c6), 28)), _AND(_SHIFTR64(x, 28), c6)); }
 
-
+/*
 #define _mm256_set_8x32(p32,start,offset) _mm256_set_epi64x( \
 	(uint64_t)p32[start+6*offset]	|	((uint64_t)p32[start+7*offset])<<32, \
 	(uint64_t)p32[start+4*offset]	|	((uint64_t)p32[start+5*offset])<<32, \
@@ -58,14 +58,14 @@ x = _OR(_OR(_AND(x, c5), _SHIFTL64(_AND(x, c6), 28)), _AND(_SHIFTR64(x, 28), c6)
 	w256[1] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_set_8x32(src32,8*offset, offset), perm), perm8x32); \
 	w256[2] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_set_8x32(src32,16*offset,offset), perm), perm8x32); \
 	w256[3] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_set_8x32(src32,24*offset,offset), perm), perm8x32);
+*/
 
-/*
 #define Read_32x32_macros(w256, src32, offset) \
 	w256[0] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_i32gather_epi32((const int *)(src32), 			 index1, 1), perm), perm8x32); \
 	w256[1] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_i32gather_epi32((const int *)(src32+offset* 8), index1, 1), perm), perm8x32); \
 	w256[2] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_i32gather_epi32((const int *)(src32+offset*16), index1, 1), perm), perm8x32); \
 	w256[3] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_i32gather_epi32((const int *)(src32+offset*24), index1, 1), perm), perm8x32);
-*/
+
 
 #define Extract_epi32_macros(dst,src,s,offset) \
 	dst[(s) * offset] = _mm256_extract_epi32(src, 0); \
