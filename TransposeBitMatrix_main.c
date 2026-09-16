@@ -11,6 +11,9 @@
 #include "MemoryAlign.h"
 
 
+#define __GATHER__ 0 // 1 - use _mm256_i32gather_epi32, 0 - use _mm256_set_epi64x
+
+
 #define ITER_ (1<<20)
 #define ITER_HALF (ITER_/2)
 
@@ -35,8 +38,11 @@ _ALIGN(32) const __m256i perm = _mm256_set_epi8(15, 11, 7, 3, 14, 10, 6, 2, 13, 
 _ALIGN(32) const __m256i perm8x32 = _mm256_set_epi32(7, 3, 6, 2, 5, 1, 4, 0);
 
 
+#if __GATHER__==0
+#define DECL_INDEX1(of1)
+#else
 #define DECL_INDEX1(of1) _ALIGN(32) const __m256i index1 = _mm256_set_epi32((of1)*7,(of1)*6,(of1)*5,(of1)*4,(of1)*3,(of1)*2,(of1),0);
-
+#endif
 
 /* выше универсальное решение index1 */
 /*_ALIGN(32) const __m256i index1 = _mm256_set_epi32(28, 24, 20, 16, 12, 8, 4, 0);*/
@@ -47,7 +53,7 @@ x = _OR(_OR(_AND(x, c1), _SHIFTL64(_AND(x, c2), 7)), _AND(_SHIFTR64(x, 7), c2));
 x = _OR(_OR(_AND(x, c3), _SHIFTL64(_AND(x, c4), 14)), _AND(_SHIFTR64(x, 14), c4)); \
 x = _OR(_OR(_AND(x, c5), _SHIFTL64(_AND(x, c6), 28)), _AND(_SHIFTR64(x, 28), c6)); }
 
-/*
+#if __GATHER__==0
 #define _mm256_set_8x32(p32,start,offset) _mm256_set_epi64x( \
 	(uint64_t)p32[start+6*offset]	|	((uint64_t)p32[start+7*offset])<<32, \
 	(uint64_t)p32[start+4*offset]	|	((uint64_t)p32[start+5*offset])<<32, \
@@ -58,13 +64,13 @@ x = _OR(_OR(_AND(x, c5), _SHIFTL64(_AND(x, c6), 28)), _AND(_SHIFTR64(x, 28), c6)
 	w256[1] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_set_8x32(src32,8*offset, offset), perm), perm8x32); \
 	w256[2] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_set_8x32(src32,16*offset,offset), perm), perm8x32); \
 	w256[3] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_set_8x32(src32,24*offset,offset), perm), perm8x32);
-*/
-
+#else
 #define Read_32x32_macros(w256, src32, offset) \
 	w256[0] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_i32gather_epi32((const int *)(src32), 			 index1, 1), perm), perm8x32); \
 	w256[1] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_i32gather_epi32((const int *)(src32+offset* 8), index1, 1), perm), perm8x32); \
 	w256[2] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_i32gather_epi32((const int *)(src32+offset*16), index1, 1), perm), perm8x32); \
 	w256[3] = _mm256_permutevar8x32_epi32(_mm256_shuffle_epi8(_mm256_i32gather_epi32((const int *)(src32+offset*24), index1, 1), perm), perm8x32);
+#endif
 
 
 #define Extract_epi32_macros(dst,src,s,offset) \
@@ -694,16 +700,19 @@ void real_ortho_to_128x128x2_modify(const uint8_t *src, __m256i data[])
 	};
 
 	uint64_t *src64 = (uint64_t*)src;
+
+#if __GATHER__==0	
 	for (uint32_t i=0;i<128;++i)
 	{
 		data[i] = _mm256_setr_epi64x(src64[i*2], src64[i*2+1], src64[(i+128)*2], src64[(i+128)*2+1]);
 	}
-
-//	const __m256i idx = _mm256_setr_epi64x(0,1*8,256*8,257*8); //_mm256_setr_epi64x(0,1*8,256*8,257*8);
-//	for (uint32_t i=0;i<128;++i)
-//	{
-//		data[i] = _mm256_i64gather_epi64((const long long int *)(src64+i*2), idx, 1);
-//	}
+#else
+	const __m256i idx = _mm256_setr_epi64x(0,1*8,256*8,257*8); //_mm256_setr_epi64x(0,1*8,256*8,257*8);
+	for (uint32_t i=0;i<128;++i)
+	{
+		data[i] = _mm256_i64gather_epi64((const long long int *)(src64+i*2), idx, 1);
+	}
+#endif
 
 	for (int i = 0; i < 7; i++) {
 		int n = (1UL << i);
@@ -822,16 +831,19 @@ void real_ortho_to_64x64x4_modify(const uint8_t* src, __m256i data[])
 	};
 
 	uint64_t *src64 = (uint64_t*)src;
+
+#if __GATHER__==0
 	for (uint32_t i=0;i<64;++i)
 	{
 		data[i] = _mm256_setr_epi64x(src64[i], src64[i+64], src64[i+128], src64[i+192]);
 	}
-	
-//	const __m256i offsets = _mm256_setr_epi64x(0,64,128,192);
-//	for (uint32_t i=0;i<64;++i)
-//	{
-//		data[i] = _mm256_i64gather_epi64((const long long int *)src64+i, offsets, 8);
-//	}
+#else
+	const __m256i offsets = _mm256_setr_epi64x(0,64,128,192);
+	for (uint32_t i=0;i<64;++i)
+	{
+		data[i] = _mm256_i64gather_epi64((const long long int *)src64+i, offsets, 8);
+	}
+#endif
 	
 	for (int i = 0; i < 6; i++) {
 		int n = (1UL << i);
