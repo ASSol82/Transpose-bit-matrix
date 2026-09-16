@@ -11,7 +11,7 @@
 #include "MemoryAlign.h"
 
 
-#define __GATHER__ 0 // 1 - use _mm256_i32gather_epi32, 0 - use _mm256_set_epi64x
+#define __GATHER__ 1 // 1 - use _mm256_i32gather_epi32, 0 - use _mm256_set_epi64x
 
 
 #define ITER_ (1<<20)
